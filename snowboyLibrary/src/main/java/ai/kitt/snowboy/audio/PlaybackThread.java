@@ -1,9 +1,11 @@
 package ai.kitt.snowboy.audio;
 
+import android.content.Context;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.util.Log;
+
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
@@ -20,9 +22,11 @@ import ai.kitt.snowboy.Constants;
 public class PlaybackThread {
     private static final String TAG = PlaybackThread.class.getSimpleName();
 
-    public PlaybackThread() {
+    public PlaybackThread(Context context) {
+        this.context = context;
     }
 
+    private Context context;
     private Thread thread;
     private boolean shouldContinue;
     protected AudioTrack audioTrack;
@@ -32,23 +36,16 @@ public class PlaybackThread {
     }
 
     public void startPlayback() {
-        if (thread != null)
-            return;
+        if (thread != null) return;
 
         // Start streaming in a thread
         shouldContinue = true;
-        thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                play();
-            }
-        });
+        thread = new Thread(this::play);
         thread.start();
     }
 
     public void stopPlayback() {
-        if (thread == null)
-            return;
+        if (thread == null) return;
 
         shouldContinue = false;
         relaseAudioTrack();
@@ -59,18 +56,19 @@ public class PlaybackThread {
         if (audioTrack != null) {
             try {
                 audioTrack.release();
-            } catch (Exception e) {}
+            } catch (Exception e) {
+            }
         }
     }
 
     public short[] readPCM() {
         try {
-            File recordFile = new File(Constants.SAVE_AUDIO);
+            File recordFile = new File(context.getFilesDir(), Constants.SAVE_AUDIO);
             InputStream inputStream = new FileInputStream(recordFile);
             BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
             DataInputStream dataInputStream = new DataInputStream(bufferedInputStream);
 
-            byte[] audioData = new byte[(int)recordFile.length()];
+            byte[] audioData = new byte[(int) recordFile.length()];
 
             dataInputStream.read(audioData);
             dataInputStream.close();
@@ -94,13 +92,7 @@ public class PlaybackThread {
         int bufferSizeInBytes = samples.length * shortSizeInBytes;
         Log.v(TAG, "shortSizeInBytes: " + shortSizeInBytes + " bufferSizeInBytes: " + bufferSizeInBytes);
 
-        audioTrack = new AudioTrack(
-                AudioManager.STREAM_MUSIC,
-                Constants.SAMPLE_RATE,
-                AudioFormat.CHANNEL_OUT_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                bufferSizeInBytes,
-                AudioTrack.MODE_STREAM);
+        audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, Constants.SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSizeInBytes, AudioTrack.MODE_STREAM);
 
         if (audioTrack.getState() == AudioTrack.STATE_INITIALIZED) {
             audioTrack.play();

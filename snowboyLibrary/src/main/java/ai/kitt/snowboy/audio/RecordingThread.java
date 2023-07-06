@@ -1,26 +1,19 @@
 package ai.kitt.snowboy.audio;
 
-import java.io.IOException;
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.media.AudioFormat;
+import android.media.AudioRecord;
+import android.media.MediaRecorder;
+import android.os.Handler;
+import android.os.Message;
+import android.util.Log;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import ai.kitt.snowboy.Constants;
 import ai.kitt.snowboy.MsgEnum;
-
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.content.Context;
-import android.content.pm.PackageManager;
-import android.media.AudioFormat;
-import android.media.AudioRecord;
-import android.media.MediaRecorder;
-import android.media.MediaPlayer;
-import android.os.Handler;
-import android.os.Message;
-import android.util.Log;
-
-import androidx.core.app.ActivityCompat;
-
 import ai.kitt.snowboy.SnowboyDetect;
 
 public class RecordingThread {
@@ -37,27 +30,19 @@ public class RecordingThread {
 
     private String activeModel;
     private String commonRes;
-    private String dingWav;
     private SnowboyDetect detector;
-    private MediaPlayer player = new MediaPlayer();
 
     public RecordingThread(Context context, Handler handler, AudioDataReceivedListener listener) {
         this.handler = handler;
         this.listener = listener;
 
-        activeModel = context.getFilesDir().getAbsolutePath() + Constants.DEFAULT_WORK_SPACE + Constants.ACTIVE_UMDL;
-        commonRes = context.getFilesDir().getAbsolutePath() + Constants.DEFAULT_WORK_SPACE + Constants.ACTIVE_RES;
-        dingWav = context.getFilesDir().getAbsolutePath() + Constants.DEFAULT_WORK_SPACE + Constants.DING_WAV;
+        String basePath = context.getFilesDir().getAbsolutePath() + Constants.DEFAULT_WORK_SPACE;
+        activeModel = basePath + Constants.ACTIVE_UMDL;
+        commonRes = basePath + Constants.ACTIVE_RES;
         detector = new SnowboyDetect(commonRes, activeModel);
         detector.SetSensitivity("0.4");
         detector.SetAudioGain(1);
         detector.ApplyFrontend(true);
-        try {
-            player.setDataSource(dingWav);
-            player.prepare();
-        } catch (IOException e) {
-            Log.e(TAG, "Playing ding sound error", e);
-        }
     }
 
     private void sendMessage(MsgEnum what, Object obj) {
@@ -72,12 +57,7 @@ public class RecordingThread {
             return;
 
         shouldContinue = true;
-        thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                record();
-            }
-        });
+        thread = new Thread(this::record);
         thread.start();
     }
 
@@ -126,7 +106,7 @@ public class RecordingThread {
             if (null != listener) {
                 listener.onAudioDataReceived(audioBuffer, audioBuffer.length);
             }
-            
+
             // Converts to short array.
             short[] audioData = new short[audioBuffer.length / 2];
             ByteBuffer.wrap(audioBuffer).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(audioData);
@@ -147,7 +127,6 @@ public class RecordingThread {
             } else if (result > 0) {
                 sendMessage(MsgEnum.MSG_ACTIVE, null);
                 Log.i("Snowboy: ", "Hotword " + Integer.toString(result) + " detected!");
-                player.start();
             }
         }
 

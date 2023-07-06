@@ -1,23 +1,17 @@
 plugins {
-    id 'com.android.application'
+    id 'com.android.library'
 }
 
 android {
-    namespace 'ai.kitt.snowboy.demo'
+    namespace 'ai.kitt.snowboylibrary'
     compileSdk 33
 
     defaultConfig {
-        applicationId "ai.kitt.snowboy.demo"
         minSdk 24
         targetSdk 33
-        versionCode 1
-        versionName "1.0"
-
-        ndk {
-            abiFilters 'arm64-v8a'
-        }
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
     }
 
     buildTypes {
@@ -30,17 +24,10 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-    sourceSets {
-        main {
-            assets {
-                srcDirs 'src/main/assets'
-            }
-        }
-    }
 }
 
 dependencies {
-    implementation project(':snowboyLibrary')
+
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'
     testImplementation 'junit:junit:4.13.2'
